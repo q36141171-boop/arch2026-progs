@@ -15,8 +15,18 @@
     .type   op1_asm, @function
     .align  2
 op1_asm:
-    sw      zero, 0(a2)
-    li      a0, 0
+    li      t0, 0
+    beqz    a1, .Lop1_done
+
+.Lop1_loop:
+    and     t1, a0, a1
+    xor     a0, a0, a1
+    slli    a1, t1, 1
+    addi    t0, t0, 1
+    bnez    a1, .Lop1_loop
+
+.Lop1_done:
+    sw      t0, 0(a2)
     ret
     .size   op1_asm, .-op1_asm
 

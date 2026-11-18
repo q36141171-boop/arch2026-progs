@@ -1,12 +1,18 @@
 #include "fixed.h"
 
-/* Dummies: every function returns 0. Replace with the real routines. */
 uint32_t op1(uint32_t a, uint32_t b, int *n)
 {
-    (void) a;
-    (void) b;
-    *n = 0;
-    return 0;
+    int passes = 0;
+
+    while (b != 0u) {
+        uint32_t carry = (a & b) << 1;
+        a ^= b;
+        b = carry;
+        ++passes;
+    }
+
+    *n = passes;
+    return a;
 }
 
 uint32_t op2(uint32_t a, uint32_t b)
