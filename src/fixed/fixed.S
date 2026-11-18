@@ -34,7 +34,7 @@ op1_asm:
     .type   op2_asm, @function
     .align  2
 op2_asm:
-    li      a0, 0
+    sub     a0, a0, a1
     ret
     .size   op2_asm, .-op2_asm
 
@@ -42,7 +42,10 @@ op2_asm:
     .type   op3_asm, @function
     .align  2
 op3_asm:
-    li      a0, 0
+    and     t0, a0, a1
+    xor     t1, a0, a1
+    srli    t1, t1, 1
+    add     a0, t0, t1
     ret
     .size   op3_asm, .-op3_asm
 
