@@ -78,6 +78,38 @@ uint16_t bf16_mul(uint16_t a, uint16_t b)
 
 uint16_t bf16_sqrt(uint16_t a)
 {
-    (void) a;
-    return 0;
+    unsigned magnitude = a & (BF16_SIGN - 1u);
+
+    if (magnitude > BF16_INF)
+        return a;
+    if ((a & BF16_SIGN) && magnitude != 0u)
+        return BF16_NAN;
+    if (magnitude == BF16_INF)
+        return a;
+    if (magnitude < BF16_HIDDEN)
+        return 0;
+
+    int exponent = (int) (magnitude >> 7) - 127;
+    unsigned sig = (magnitude & BF16_FRACTION) | BF16_HIDDEN;
+
+    if (exponent % 2 != 0) {
+        sig <<= 1;
+        --exponent;
+    }
+
+    unsigned limit = (sig << 7) + 127u;
+    unsigned low = 128;
+    unsigned high = 255;
+
+    while (low < high) {
+        unsigned mid = (low + high + 1u) >> 1;
+
+        if (mid * mid <= limit)
+            low = mid;
+        else
+            high = mid - 1u;
+    }
+
+    unsigned result_exponent = (unsigned) (exponent / 2 + 127);
+    return (uint16_t) ((result_exponent << 7) | (low & BF16_FRACTION));
 }

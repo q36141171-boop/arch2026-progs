@@ -148,6 +148,60 @@ bf16_mul_asm:
     .type   bf16_sqrt_asm, @function
     .align  2
 bf16_sqrt_asm:
+    slli    t0, a0, 17
+    srli    t0, t0, 17
+    li      t1, 0x7f80
+    bltu    t1, t0, .Lsqrt_return
+    srli    t2, a0, 15
+    bnez    t2, .Lsqrt_negative
+    beq     t0, t1, .Lsqrt_return
+    srli    t0, a0, 7
+    beqz    t0, .Lsqrt_zero
+
+    # Index the table by unbiased exponent parity and fraction.
+    addi    t0, t0, -127
+    andi    t1, t0, 1
+    slli    t1, t1, 7
+    andi    t2, a0, 127
+    or      t1, t1, t2
+    la      t2, .Lsqrt_fraction
+    add     t2, t2, t1
+    lbu     t2, 0(t2)
+
+    # Halve the exponent and pack the BFloat16 result.
+    srai    t0, t0, 1
+    addi    t0, t0, 127
+    slli    t0, t0, 7
+    or      a0, t0, t2
+.Lsqrt_return:
+    ret
+
+.Lsqrt_negative:
+    beqz    t0, .Lsqrt_zero
+    li      a0, 0x7fc0
+    ret
+
+.Lsqrt_zero:
     li      a0, 0
     ret
     .size   bf16_sqrt_asm, .-bf16_sqrt_asm
+
+    .section .rodata
+.Lsqrt_fraction:
+    # Two rows indexed by exponent parity and input fraction.
+    .set parity, 0
+    .rept 2
+    .set fraction, 0
+    .set root, 127 + 53 * parity
+    .rept 128
+    .set radicand, (((128 + fraction) << parity) << 7) + 127
+    .rept 2
+    .if (root + 1) * (root + 1) <= radicand
+    .set root, root + 1
+    .endif
+    .endr
+    .byte root & 127
+    .set fraction, fraction + 1
+    .endr
+    .set parity, parity + 1
+    .endr
