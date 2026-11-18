@@ -53,6 +53,48 @@ op3_asm:
     .type   q_mul_asm, @function
     .align  2
 q_mul_asm:
-    li      a0, 0
+    # a2:a0 holds the signed multiplicand.
+    # t1 is the sign mask of b, and a1 becomes its magnitude.
+    srai    a2, a0, 31
+    srai    t1, a1, 31
+    xor     a1, a1, t1
+    sub     a1, a1, t1
+
+    # a4:a3 holds the 64-bit product.
+    li      a3, 0
+    li      a4, 0
+    beqz    a1, .Lq_round
+
+.Lq_product:
+    andi    t0, a1, 1
+    beqz    t0, .Lq_shift
+    add     a3, a3, a0
+    add     a4, a4, a2
+    sltu    t0, a3, a0
+    add     a4, a4, t0
+
+.Lq_shift:
+    srli    t0, a0, 31
+    slli    a2, a2, 1
+    slli    a0, a0, 1
+    or      a2, a2, t0
+    srli    a1, a1, 1
+    bnez    a1, .Lq_product
+
+    # Restore the sign of b in the full product.
+    beqz    t1, .Lq_round
+    neg     a3, a3
+    seqz    t0, a3
+    not     a4, a4
+    add     a4, a4, t0
+
+.Lq_round:
+    li      t0, 0x80000
+    add     a3, a3, t0
+    sltu    t1, a3, t0
+    add     a4, a4, t1
+    srli    a3, a3, 20
+    slli    a4, a4, 12
+    or      a0, a3, a4
     ret
     .size   q_mul_asm, .-q_mul_asm
